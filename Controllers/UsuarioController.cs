@@ -39,54 +39,115 @@ namespace APICORE.Controllers
 
 
         //Aqui va lo mio
+        //[HttpPost]
+        //public IActionResult Postprueba(Users usuario)
+        //{
+        //    string rol = "";
+        //    string tokenString = "";
+        //    string estado = "";
+        //    string nombre = "";
+
+        //    try
+        //    {
+        //        using (var connection = new SqlConnection(cadenaSQl))
+        //        {
+        //            connection.Open();
+        //            var query = "ValidarLogin";
+        //            using (var command = new SqlCommand(query, connection))
+        //            {
+        //                command.CommandType = CommandType.StoredProcedure;
+        //                command.Parameters.AddWithValue("@nombre_usuario", usuario.UserName);
+        //                command.Parameters.AddWithValue("@contrasenia", usuario.Password);
+        //                using (var reader = command.ExecuteReader())
+        //                {
+        //                    if (reader.Read())
+        //                    {
+        //                        estado = reader["estado"].ToString().Trim();
+
+        //                        if (estado == "Inicio de sesión fallido")
+        //                            return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
+        //                        else if( estado == "Usuario deshabilitado")
+        //                            return BadRequest(new { mensaje = "Usuario deshabilitado" });
+        //                        else
+        //                        {
+        //                            rol = reader["rol"].ToString().Trim();
+        //                            nombre = reader["usuario"].ToString().Trim();
+        //                            var token = GenerateToken();
+        //                            tokenString = token;
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+
+        //        return Ok(new { nomnbre = nombre, rol = rol, estado = estado, token = tokenString });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { mensaje = ex.Message});
+        //    }
+        //}
+
+        //-----------------------------Nuevo metodo -------------------------------------
         [HttpPost]
         public IActionResult Postprueba(Users usuario)
+        {
+            try
+            {
+                var (rol, nombre, estado, tokenString) = AuthenticateUser(usuario.UserName, usuario.Password);
+
+                if (estado == "Inicio de sesión fallido")
+                    return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
+                else if (estado == "Usuario deshabilitado")
+                    return BadRequest(new { mensaje = "Usuario deshabilitado" });
+
+                return Ok(new { nombre, rol, estado, token = tokenString });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = ex.Message });
+            }
+        }
+
+        private (string Rol, string Nombre, string Estado, string Token) AuthenticateUser(string userName, string password)
         {
             string rol = "";
             string tokenString = "";
             string estado = "";
             string nombre = "";
 
-            try
+            using (var connection = new SqlConnection(cadenaSQl))
             {
-                using (var connection = new SqlConnection(cadenaSQl))
-                {
-                    connection.Open();
-                    var query = "ValidarLogin";
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.CommandType = CommandType.StoredProcedure;
-                        command.Parameters.AddWithValue("@nombre_usuario", usuario.UserName);
-                        command.Parameters.AddWithValue("@contrasenia", usuario.Password);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                estado = reader["estado"].ToString().Trim();
+                connection.Open();
+                var query = "ValidarLogin";
 
-                                if (estado == "Inicio de sesión fallido")
-                                    return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
-                                else if( estado == "Usuario deshabilitado")
-                                    return BadRequest(new { mensaje = "Usuario deshabilitado" });
-                                else
-                                {
-                                    rol = reader["rol"].ToString().Trim();
-                                    nombre = reader["usuario"].ToString().Trim();
-                                    var token = GenerateToken();
-                                    tokenString = token;
-                                }
-                            }
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@nombre_usuario", userName);
+                    command.Parameters.AddWithValue("@contrasenia", password);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            estado = reader["estado"].ToString().Trim();
+
+                            if (estado == "Inicio de sesión fallido" || estado == "Usuario deshabilitado")
+                                return (rol, nombre, estado, tokenString);
+
+                            rol = reader["rol"].ToString().Trim();
+                            nombre = reader["usuario"].ToString().Trim();
+                            var token = GenerateToken();
+                            tokenString = token;
                         }
                     }
                 }
+            }
 
-                return Ok(new { nomnbre = nombre, rol = rol, estado = estado, token = tokenString });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { mensaje = ex.Message});
-            }
+            return (rol, nombre, estado, tokenString);
         }
+
     }
 
 }
