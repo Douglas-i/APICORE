@@ -25,56 +25,6 @@ namespace APICORE.Controllers
             cadenaSQl = configuration.GetConnectionString("CadenaSQL");
         }
 
-        // [AllowAnonymous]
-        //[HttpPost]
-        //public IActionResult Login([FromBody] Users usuario)
-        //{
-
-        //    IActionResult response = Unauthorized();
-        //    var user_ = AuthenticateUser(usuario.UserName, usuario.Password);
-        //    if (user_ != null)
-        //    {
-
-        //        var token = GenerateToken();
-        //        response = Ok(new { token = token, user_ });
-
-        //    }
-        //    return response;
-        //}
-
-        //private Users AuthenticateUser(string nombreUsuario, string password)
-        //{
-        //    string rol = "";
-        //    Users usuario = new Users();
-        //    try
-        //    {
-        //        using (var connection = new SqlConnection(cadenaSQl))
-        //        {
-        //            connection.Open();
-        //            var cmd = new SqlCommand("usp_ValidarUsuario", connection);
-        //            cmd.CommandType = CommandType.StoredProcedure;
-
-        //            cmd.Parameters.AddWithValue("@usuario", nombreUsuario);
-        //            cmd.Parameters.AddWithValue("@contraseña", password);
-
-        //            using (var reader = cmd.ExecuteReader())
-        //            {
-        //                while (reader.Read())
-        //                {
-        //                    usuario.UserName = reader["ROL"].ToString();
-        //                    usuario.Password = reader["Password"].ToString();
-        //                }
-        //            }
-        //        }
-        //        return usuario;
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return usuario = null;
-        //    }
-
-        //}
 
         private string GenerateToken()
         {
@@ -95,6 +45,7 @@ namespace APICORE.Controllers
             string rol = "";
             string tokenString = "";
             string estado = "";
+            string nombre = "";
 
             try
             {
@@ -109,53 +60,31 @@ namespace APICORE.Controllers
                         command.Parameters.AddWithValue("@contrasenia", usuario.Password);
                         using (var reader = command.ExecuteReader())
                         {
-                            //if (reader[5].ToString() == "Activo" || reader[0].ToString() == "Inicio de sesión fallido")
-                            //{
-                            //    rol = reader["rol"].ToString();
-                            //    var token = GenerateToken();
-                            //    tokenString = token;
-                            //    estado = reader["Estado"].ToString();
-                            //}
-                            //else if (reader["Mensaje"].ToString() == "Usuario deshabilitado")
-                            //{
-                            //    return BadRequest(new { mensaje = "Usuario deshabilitado" });
-                            //} else
-                            //{
-                            //    return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
-                            //}
                             if (reader.Read())
                             {
-                                estado = reader["Estado"].ToString();
+                                estado = reader["estado"].ToString().Trim();
 
-                                if (estado == "Activo")
+                                if (estado == "Inicio de sesión fallido")
+                                    return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
+                                else if( estado == "Usuario deshabilitado")
+                                    return BadRequest(new { mensaje = "Usuario deshabilitado" });
+                                else
                                 {
-                                    rol = reader["rol"].ToString();
+                                    rol = reader["rol"].ToString().Trim();
+                                    nombre = reader["usuario"].ToString().Trim();
                                     var token = GenerateToken();
                                     tokenString = token;
-
                                 }
-                                else if (reader["Mensaje"].ToString() == "Usuario deshabilitado")
-                                {
-                                    return BadRequest(new { mensaje = "Usuario deshabilitado" });
-                                }
-
-                                //rol = reader["rol"].ToString();
-                                //var token = GenerateToken();
-                                //tokenString = token;
-                            }
-                            else
-                            {
-                                return BadRequest(new { mensaje = "Usuario o contraseña incorrectos" });
                             }
                         }
                     }
                 }
 
-                return Ok(new { rol = rol, estado = estado, token = tokenString });
+                return Ok(new { nomnbre = nombre, rol = rol, estado = estado, token = tokenString });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { mensaje = "Entro al catch" });
+                return StatusCode(500, new { mensaje = ex.Message});
             }
         }
     }
